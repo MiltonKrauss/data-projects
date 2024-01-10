@@ -119,6 +119,9 @@ WHERE dea.continent IS NOT NULL
 SELECT *, (rolling_vac_count/population)*100
 FROM #percentPopulationVaccinated
 
+
+
+
 -- Creating views to store for visualizations
 
 DROP VIEW IF EXISTS percentPopulationVaccinated
@@ -153,9 +156,10 @@ WHERE continent IS NOT NULL
 DROP VIEW IF EXISTS infectionsVsPopulation
 
 CREATE VIEW infectionsVsPopulation AS
-SELECT location, population, MAX(CAST(total_cases AS float)) AS highest_infection_count, MAX(CAST(total_cases AS float)/population)*100 AS percent_reported_infections_vs_population
+SELECT location, population, date, MAX(CAST(total_cases AS float)) AS highest_infection_count, MAX(CAST(total_cases AS float)/population)*100 AS percent_reported_infections_vs_population
 FROM PortfolioProject..covidDeaths
-GROUP BY location, population
+GROUP BY location, population, date
+ORDER BY percent_reported_infections_vs_population DESC
 
 -- Number of COVID-related deaths vs country population
 
@@ -182,9 +186,42 @@ GROUP BY location, population
 DROP VIEW IF EXISTS deathsByContinent
 
 CREATE VIEW deathsByContinent AS
-SELECT location, MAX(CAST(total_deaths AS float)) AS total_deaths
+SELECT location, MAX(CAST(total_deaths AS bigint)) AS total_deaths
 FROM PortfolioProject..covidDeaths
 WHERE continent IS NULL
-	AND location NOT LIKE '%income%'
-	AND location NOT LIKE '%European Union%'
+	AND location NOT IN ('European Union', 'World')
+	AND location NOT LIKE ('%income%')
 GROUP BY location
+ORDER BY total_deaths DESC
+
+
+
+-- The queries that went on to create Tableau tables:
+
+-- 1.
+SELECT SUM(new_cases) AS total_cases, SUM(CAST(new_deaths AS INT)) AS total_deaths, SUM(CAST(new_deaths AS INT))/SUM(new_cases)*100 AS death_percentage
+FROM PortfolioProject..covidDeaths
+WHERE continent IS NOT NULL;
+
+-- 2.
+SELECT location, MAX(CAST(total_deaths AS bigint)) AS total_deaths
+FROM PortfolioProject..covidDeaths
+WHERE continent IS NULL
+	AND location NOT IN ('European Union', 'World')
+	AND location NOT LIKE ('%income%')
+GROUP BY location
+ORDER BY total_deaths DESC
+
+-- 3.
+SELECT location, population, MAX(CAST(total_deaths AS float)) AS total_deaths, MAX(CAST(total_deaths AS float)/population)*100 AS percent_reported_deaths_vs_population
+FROM PortfolioProject..covidDeaths
+WHERE continent IS NOT NULL
+GROUP BY location, population
+ORDER BY percent_reported_deaths_vs_population DESC
+
+-- 4.
+SELECT location, population, date, MAX(CAST(total_deaths AS float)) AS total_deaths, MAX(CAST(total_deaths AS float)/population)*100 AS percent_reported_deaths_vs_population
+FROM PortfolioProject..covidDeaths
+WHERE continent IS NOT NULL
+GROUP BY location, population, date
+ORDER BY percent_reported_deaths_vs_population DESC
